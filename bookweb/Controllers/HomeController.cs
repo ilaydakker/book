@@ -13,6 +13,7 @@ namespace bookweb.Controllers
             _logger = logger;
         }
 
+        //git testi yapýldý.
         public IActionResult Index()
         {
             return View();
@@ -20,7 +21,7 @@ namespace bookweb.Controllers
 
         public IActionResult Privacy()
         {
-            return View();
+            return View(); 
         }
 
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
