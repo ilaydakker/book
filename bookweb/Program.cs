@@ -1,7 +1,20 @@
+using bookweb.Data;
+using BookWeb.Business.Services;
+using BookWeb.Business.Services.IServices;
+using Microsoft.EntityFrameworkCore;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+{
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+});
+builder.Services.AddScoped<ICategoryService,CategoryService>();
+builder.Services.AddScoped<IProductService, ProductService>();
+
 
 var app = builder.Build();
 
@@ -21,7 +34,13 @@ app.UseRouting();
 app.UseAuthorization();
 
 app.MapControllerRoute(
+    name: "MyArea",
+    pattern: "{area:exists}/{controller=Home}/{action=Index}/{id?}");
+
+
+app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}");
+    pattern: "{controller=Home}/{action=Index}/{id?}",
+    defaults: new { area = "Customer" });
 
 app.Run();
