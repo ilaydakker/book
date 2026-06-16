@@ -1,0 +1,10 @@
+BOOKWEB - ÇEVRİMİÇİ KİTAP MAĞAZASI VE KİTAP YÖNETİM SİSTEMİ
+
+Uygulama ilk kez çalıştırıldığında veritabanı otomatik olarak oluşturulur ve aşağıdaki "Admin" (Yönetici) hesabı sisteme tanımlanır. Yönetim paneline erişmek için bu bilgileri kullanabilirsiniz:
+
+Kullanıcı Adı (Email) : admin@bookweb.com
+Şifre                 : Admin123*
+Rol                   : Admin
+
+Müşteri hesaplarını ise uygulamanın ana sayfasındaki "Register" bölümünden dilediğiniz gibi oluşturabilirsiniz.
+(Chatbot'u kullanmak için appsettings.Development dosyasındaki DeepSeek API anahtarını kendi anahtarınla değiştirmelisin)
