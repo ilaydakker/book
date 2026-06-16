@@ -1,4 +1,4 @@
-BOOKWEB - ÇEVRİMİÇİ KİTAP MAĞAZASI VE KİTAP YÖNETİM SİSTEMİ
+
 
 Uygulama ilk kez çalıştırıldığında veritabanı otomatik olarak oluşturulur ve aşağıdaki "Admin" (Yönetici) hesabı sisteme tanımlanır. Yönetim paneline erişmek için bu bilgileri kullanabilirsiniz:
 
