@@ -1,0 +1,215 @@
+@model IEnumerable<Wishlist>
+@{
+    ViewData["Title"] = "My Books";
+    var currentStatus = ViewBag.CurrentStatus as string;
+    var totalCount = (int)ViewBag.TotalCount;
+    var wantToReadCount = (int)ViewBag.WantToReadCount;
+    var currentlyReadingCount = (int)ViewBag.CurrentlyReadingCount;
+    var readCount = (int)ViewBag.ReadCount;
+}
+
+<div class="container py-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1"><i class="bi bi-book-half text-primary me-2"></i>My Books</h2>
+            <p class="text-secondary mb-0">Track your reading journey</p>
+        </div>
+        <a asp-action="Index" class="btn btn-outline-dark">
+            <i class="bi bi-arrow-left me-1"></i>Browse Books
+        </a>
+    </div>
+
+    <!-- Status Tabs -->
+    <ul class="nav nav-pills mb-4 gap-2">
+        <li class="nav-item">
+            <a asp-action="MyBooks" class="nav-link @(string.IsNullOrEmpty(currentStatus) ? "active" : "")"
+               style="@(string.IsNullOrEmpty(currentStatus) ? "background: #1e293b;" : "color: #1e293b;")">
+                <i class="bi bi-collection me-1"></i>All <span class="badge bg-light text-dark ms-1">@totalCount</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a asp-action="MyBooks" asp-route-status="WantToRead"
+               class="nav-link @(currentStatus == "WantToRead" ? "active" : "")"
+               style="@(currentStatus == "WantToRead" ? "background: #f59e0b;" : "color: #92400e;")">
+                <i class="bi bi-bookmark me-1"></i>Want to Read <span class="badge bg-light text-dark ms-1">@wantToReadCount</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a asp-action="MyBooks" asp-route-status="CurrentlyReading"
+               class="nav-link @(currentStatus == "CurrentlyReading" ? "active" : "")"
+               style="@(currentStatus == "CurrentlyReading" ? "background: #3b82f6;" : "color: #1d4ed8;")">
+                <i class="bi bi-book me-1"></i>Currently Reading <span class="badge bg-light text-dark ms-1">@currentlyReadingCount</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a asp-action="MyBooks" asp-route-status="Read"
+               class="nav-link @(currentStatus == "Read" ? "active" : "")"
+               style="@(currentStatus == "Read" ? "background: #10b981;" : "color: #065f46;")">
+                <i class="bi bi-check-circle me-1"></i>Read <span class="badge bg-light text-dark ms-1">@readCount</span>
+            </a>
+        </li>
+    </ul>
+
+    @if (Model.Any())
+    {
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
+            @foreach (var item in Model)
+            {
+                var product = item.Product!;
+                <div class="col" id="book-item-@product.Id">
+                    <div class="card h-100 border shadow-sm position-relative">
+                        <!-- Status Badge -->
+                        <span class="position-absolute top-0 start-0 m-2 badge @GetStatusBadgeClass(item.Status)" style="z-index: 2;">
+                            @GetStatusIcon(item.Status) @GetStatusLabel(item.Status)
+                        </span>
+
+                        <!-- Remove button -->
+                        <button class="btn btn-sm position-absolute top-0 end-0 m-2 remove-book-btn"
+                                data-product-id="@product.Id"
+                                title="Remove from library"
+                                style="z-index: 2; background: rgba(255,255,255,0.9); border-radius: 50%; width:36px; height:36px; padding:0;">
+                            <i class="bi bi-x-lg text-muted"></i>
+                        </button>
+
+                        <a asp-action="Details" asp-route-productId="@product.Id" class="text-decoration-none">
+                            <div style="aspect-ratio: 3/4; overflow: hidden;">
+                                @if (!string.IsNullOrEmpty(product.ImageUrl))
+                                {
+                                    <img src="@product.ImageUrl" class="w-100 h-100" style="object-fit: cover;" />
+                                }
+                                else
+                                {
+                                    <div class="w-100 h-100 d-flex align-items-center justify-content-center bg-light">
+                                        <i class="bi bi-book display-3 text-secondary"></i>
+                                    </div>
+                                }
+                            </div>
+                        </a>
+                        <div class="card-body">
+                            <span class="badge bg-secondary mb-2">@product.Category?.Name</span>
+                            <h6 class="card-title fw-semibold mb-2">
+                                <a asp-action="Details" asp-route-productId="@product.Id" class="text-decoration-none text-dark">
+                                    @product.Title
+                                </a>
+                            </h6>
+                            <p class="text-secondary small mb-3">by @product.Author</p>
+
+                            <!-- Status Dropdown -->
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle w-100" type="button"
+                                        data-bs-toggle="dropdown" aria-expanded="false">
+                                    @GetStatusIcon(item.Status) @GetStatusLabel(item.Status)
+                                </button>
+                                <ul class="dropdown-menu w-100">
+                                    <li><a class="dropdown-item status-change-btn" href="#" data-product-id="@product.Id" data-status="0">
+                                        <i class="bi bi-bookmark text-warning me-2"></i>Want to Read</a></li>
+                                    <li><a class="dropdown-item status-change-btn" href="#" data-product-id="@product.Id" data-status="1">
+                                        <i class="bi bi-book text-primary me-2"></i>Currently Reading</a></li>
+                                    <li><a class="dropdown-item status-change-btn" href="#" data-product-id="@product.Id" data-status="2">
+                                        <i class="bi bi-check-circle text-success me-2"></i>Read</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="text-center py-5">
+            <i class="bi bi-book display-1 text-muted"></i>
+            <h4 class="text-muted mt-3">No books here yet</h4>
+            <p class="text-secondary">Start adding books to track your reading!</p>
+            <a asp-action="Index" class="btn btn-outline-dark">Browse Books</a>
+        </div>
+    }
+</div>
+
+@functions {
+    string GetStatusBadgeClass(ReadingStatus status) => status switch
+    {
+        ReadingStatus.WantToRead => "bg-warning text-dark",
+        ReadingStatus.CurrentlyReading => "bg-primary",
+        ReadingStatus.Read => "bg-success",
+        _ => "bg-secondary"
+    };
+
+    string GetStatusLabel(ReadingStatus status) => status switch
+    {
+        ReadingStatus.WantToRead => "Want to Read",
+        ReadingStatus.CurrentlyReading => "Currently Reading",
+        ReadingStatus.Read => "Read",
+        _ => ""
+    };
+
+    string GetStatusIcon(ReadingStatus status) => status switch
+    {
+        ReadingStatus.WantToRead => "⏳",
+        ReadingStatus.CurrentlyReading => "📖",
+        ReadingStatus.Read => "✓",
+        _ => ""
+    };
+}
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            // Change reading status
+            $('.status-change-btn').on('click', function (e) {
+                e.preventDefault();
+                var productId = $(this).data('product-id');
+                var status = $(this).data('status');
+
+                $.ajax({
+                    url: '/Customer/Home/UpdateReadingStatus',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ productId: productId, status: status }),
+                    success: function (data) {
+                        if (data.success) {
+                            toastr.success(data.message);
+                            setTimeout(function() { location.reload(); }, 500);
+                        }
+                    },
+                    error: function (xhr) {
+                        if (xhr.status === 401) {
+                            window.location.href = '/Identity/Account/Login';
+                        } else {
+                            toastr.error('Something went wrong.');
+                        }
+                    }
+                });
+            });
+
+            // Remove from library
+            $('.remove-book-btn').on('click', function (e) {
+                e.preventDefault();
+                var btn = $(this);
+                var productId = btn.data('product-id');
+
+                if (!confirm('Remove this book from your library?')) return;
+
+                $.ajax({
+                    url: '/Customer/Home/RemoveFromLibrary',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ productId: productId }),
+                    success: function (data) {
+                        if (data.success) {
+                            $('#book-item-' + productId).fadeOut(300, function() { $(this).remove(); });
+                            toastr.success(data.message);
+                        }
+                    },
+                    error: function (xhr) {
+                        if (xhr.status === 401) {
+                            window.location.href = '/Identity/Account/Login';
+                        } else {
+                            toastr.error('Something went wrong.');
+                        }
+                    }
+                });
+            });
+        });
+    </script>
+}

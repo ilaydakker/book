@@ -1,0 +1,47 @@
+@page
+@model bookweb.Areas.Identity.Pages.Account.RegisterConfirmationModel
+@{
+    ViewData["Title"] = "Verify Your Email";
+}
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card shadow-sm border-0" style="background-color: #1a1a1a; border-radius: 1rem;">
+                <div class="card-body p-4 p-md-5">
+                    <div class="text-center mb-4">
+                        <div class="d-inline-flex align-items-center justify-content-center rounded-circle mb-3"
+                             style="width:56px; height:56px; background: linear-gradient(135deg, #065f46, #10b981);">
+                            <i class="bi bi-envelope-check-fill text-white fs-4"></i>
+                        </div>
+                        <h2 class="text-white fw-bold">Verify Your Email</h2>
+                        <p class="text-secondary">A 6-digit verification code has been sent to <strong class="text-white">@Model.Email</strong></p>
+                        <p class="text-secondary small">(Check the terminal/console output)</p>
+                    </div>
+
+                    <form method="post" asp-route-email="@Model.Email">
+                        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                        <div class="mb-4">
+                            <label asp-for="Input.Code" class="form-label text-light"></label>
+                            <input asp-for="Input.Code" class="form-control form-control-lg bg-dark text-white border-secondary text-center"
+                                   placeholder="000000" maxlength="6" style="letter-spacing: 0.5em; font-size: 1.5rem;" />
+                            <span asp-validation-for="Input.Code" class="text-danger"></span>
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-lg text-white fw-semibold"
+                                    style="background: linear-gradient(135deg, #065f46, #10b981); border:none;">
+                                <i class="bi bi-check-circle me-2"></i>Verify
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

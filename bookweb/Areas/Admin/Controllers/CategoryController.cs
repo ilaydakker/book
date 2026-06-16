@@ -1,11 +1,14 @@
 ﻿using bookweb.Data;
 using BookWeb.Business.Services.IServices;
 using BookWeb.Models;
+using BookWeb.Utility;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace bookweb.Areas.Admin.Controllers
 {
     [Area("Admin")]
+    [Authorize(Roles = SD.Role_Admin)]
     public class CategoryController : Controller
     {
         private readonly ICategoryService _categoryService;

@@ -1,0 +1,54 @@
+@{
+    ViewData["Title"] = "Role Management";
+}
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card border-0 shadow-sm" style="border-radius: 1rem;">
+                <div class="card-header bg-white border-0 pt-3" style="border-radius: 1rem 1rem 0 0;">
+                    <h5 class="fw-bold mb-0">
+                        <i class="bi bi-person-gear me-2" style="color: #065f46;"></i>Role Management
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex align-items-center gap-3 mb-4 p-3 rounded" style="background: #f8f9fa;">
+                        <div class="d-flex align-items-center justify-content-center rounded-circle"
+                             style="width:48px; height:48px; background: linear-gradient(135deg, #065f46, #10b981);">
+                            <i class="bi bi-person-fill text-white fs-5"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold mb-0">@ViewBag.UserName</h6>
+                            <small class="text-muted">@ViewBag.UserEmail</small>
+                        </div>
+                    </div>
+
+                    <form method="post" asp-action="RoleManagement">
+                        <input type="hidden" name="userId" value="@ViewBag.UserId" />
+
+                        <div class="mb-3">
+                            <label class="form-label fw-medium">Current Role:
+                                <span class="badge bg-primary ms-1">@ViewBag.CurrentRole</span>
+                            </label>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-medium">Assign New Role</label>
+                            <select name="role" class="form-select" asp-items="@((List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>)ViewBag.RoleList)">
+                            </select>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn text-white flex-grow-1" style="background: linear-gradient(135deg, #065f46, #10b981);">
+                                <i class="bi bi-check-lg me-1"></i>Update Role
+                            </button>
+                            <a asp-action="Index" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left me-1"></i>Back
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

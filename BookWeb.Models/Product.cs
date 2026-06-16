@@ -21,10 +21,15 @@ namespace BookWeb.Models
         public string Description { get; set; } = string.Empty;
 
         [Required]
-        public string ISBN { get; set; } =string.Empty;
-
-        [Required]
         public string Author { get; set; } = string.Empty;
+
+        public int Pages { get; set; }
+
+        public string? Publisher { get; set; }
+
+        public string? Language { get; set; }
+
+        public string? PublishedDate { get; set; }
 
         [Required]
         [Display(Name ="List Price")]

@@ -10,12 +10,11 @@ $(document).ready(function ()
 productDataTable=$('#tblData').DataTable({
     ajax: '/admin/product/getall',
     columns: [
-        { data: 'title', "width":"25%" },
-        { data: 'isbn', "width": "15%" },
+        { data: 'title', "width":"30%" },
+        { data: 'author', "width": "20%" },
         { data: 'price', "width": "10%", "render": function (data) { return '₺' + data.toFixed(2); } },
-        { data: 'author', "width": "15%" },
         {
-            data: 'category.name', "width": "10%", "render": function (data)
+            data: 'category.name', "width": "15%", "render": function (data)
             { return '<span class="badge bg-dark">' + data + '</span>'; }
         },
 

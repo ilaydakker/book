@@ -1,0 +1,226 @@
+<!-- Chat Widget -->
+<div id="chat-widget">
+    <!-- Toggle Button -->
+    <button id="chat-toggle-btn" class="btn shadow-lg" 
+            style="position: fixed; bottom: 24px; right: 24px; z-index: 9999; width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, #065f46, #10b981); color: white; border: none; font-size: 1.4rem;">
+        <i class="bi bi-chat-dots-fill"></i>
+    </button>
+
+    <!-- Chat Panel -->
+    <div id="chat-panel" style="display: none; position: fixed; bottom: 90px; right: 24px; z-index: 9999; width: 380px; max-height: 520px; border-radius: 1rem; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
+        <div class="d-flex flex-column h-100 bg-white" style="max-height: 520px;">
+            <!-- Header -->
+            <div class="px-3 py-2 d-flex align-items-center justify-content-between" style="background: linear-gradient(135deg, #065f46, #10b981);">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-robot text-white" style="font-size: 1.3rem;"></i>
+                    <div>
+                        <p class="text-white fw-semibold mb-0" style="font-size: 0.85rem;">Book Assistant</p>
+                        <p class="mb-0" style="font-size: 0.65rem; color: rgba(255,255,255,0.7);">Powered by DeepSeek</p>
+                    </div>
+                </div>
+                <button id="chat-close-btn" class="btn btn-sm text-white p-0" style="line-height: 1;">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <!-- Messages -->
+            <div id="chat-messages" class="flex-grow-1 p-3" style="overflow-y: auto; max-height: 380px; background: #f8fafc;">
+                <div class="chat-msg bot mb-3">
+                    <div class="d-flex gap-2">
+                        <div class="flex-shrink-0">
+                            <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 28px; height: 28px; background: rgba(16,185,129,0.1);">
+                                <i class="bi bi-robot" style="color: #10b981; font-size: 0.8rem;"></i>
+                            </span>
+                        </div>
+                        <div class="bg-white border rounded-3 p-2 shadow-sm" style="font-size: 0.85rem;">
+                            Hi! I'm your book assistant. Ask me anything about our books — recommendations, specific genres, authors, or help finding your next read! 📚
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input -->
+            <div class="border-top p-2 bg-white">
+                <div class="input-group">
+                    <input type="text" id="chat-input" class="form-control form-control-sm border-0" 
+                           placeholder="Ask about books..." style="font-size: 0.85rem; box-shadow: none;"
+                           autocomplete="off" />
+                    <button id="chat-send-btn" class="btn btn-sm px-3" style="background: #10b981; color: white; border: none;">
+                        <i class="bi bi-send-fill"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        var chatHistory = [];
+        var isOpen = false;
+        var isLoading = false;
+
+        var toggleBtn = document.getElementById('chat-toggle-btn');
+        var panel = document.getElementById('chat-panel');
+        var closeBtn = document.getElementById('chat-close-btn');
+        var input = document.getElementById('chat-input');
+        var sendBtn = document.getElementById('chat-send-btn');
+        var messagesDiv = document.getElementById('chat-messages');
+
+        toggleBtn.addEventListener('click', function () {
+            isOpen = !isOpen;
+            panel.style.display = isOpen ? 'block' : 'none';
+            toggleBtn.innerHTML = isOpen ? '<i class="bi bi-x-lg"></i>' : '<i class="bi bi-chat-dots-fill"></i>';
+            if (isOpen) input.focus();
+        });
+
+        closeBtn.addEventListener('click', function () {
+            isOpen = false;
+            panel.style.display = 'none';
+            toggleBtn.innerHTML = '<i class="bi bi-chat-dots-fill"></i>';
+        });
+
+        sendBtn.addEventListener('click', sendMessage);
+        input.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        function sendMessage() {
+            var msg = input.value.trim();
+            if (!msg || isLoading) return;
+
+            appendMessage('user', msg);
+            chatHistory.push({ role: 'user', content: msg });
+            input.value = '';
+            isLoading = true;
+            sendBtn.disabled = true;
+
+            // Show typing indicator
+            var typingId = 'typing-' + Date.now();
+            appendTyping(typingId);
+
+            fetch('/Customer/Chat/Ask', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: msg, history: chatHistory.slice(-6) })
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                removeTyping(typingId);
+                if (data.success) {
+                    appendMessage('bot', data.message);
+                    chatHistory.push({ role: 'assistant', content: data.message });
+                } else {
+                    appendMessage('bot', data.message || 'Sorry, something went wrong.');
+                }
+            })
+            .catch(function () {
+                removeTyping(typingId);
+                appendMessage('bot', 'Sorry, I could not connect. Please try again.');
+            })
+            .finally(function () {
+                isLoading = false;
+                sendBtn.disabled = false;
+            });
+        }
+
+        function appendMessage(role, text) {
+            var wrapper = document.createElement('div');
+            wrapper.className = 'chat-msg ' + role + ' mb-3';
+
+            if (role === 'user') {
+                wrapper.innerHTML =
+                    '<div class="d-flex justify-content-end">' +
+                        '<div class="rounded-3 p-2 text-white" style="font-size: 0.85rem; background: #065f46; max-width: 85%;">' +
+                            escapeHtml(text) +
+                        '</div>' +
+                    '</div>';
+            } else {
+                wrapper.innerHTML =
+                    '<div class="d-flex gap-2">' +
+                        '<div class="flex-shrink-0">' +
+                            '<span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 28px; height: 28px; background: rgba(16,185,129,0.1);">' +
+                                '<i class="bi bi-robot" style="color: #10b981; font-size: 0.8rem;"></i>' +
+                            '</span>' +
+                        '</div>' +
+                        '<div class="bg-white border rounded-3 p-2 shadow-sm" style="font-size: 0.85rem; max-width: 85%;">' +
+                            formatMessage(text) +
+                        '</div>' +
+                    '</div>';
+            }
+
+            messagesDiv.appendChild(wrapper);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function appendTyping(id) {
+            var wrapper = document.createElement('div');
+            wrapper.id = id;
+            wrapper.className = 'chat-msg bot mb-3';
+            wrapper.innerHTML =
+                '<div class="d-flex gap-2">' +
+                    '<div class="flex-shrink-0">' +
+                        '<span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 28px; height: 28px; background: rgba(16,185,129,0.1);">' +
+                            '<i class="bi bi-robot" style="color: #10b981; font-size: 0.8rem;"></i>' +
+                        '</span>' +
+                    '</div>' +
+                    '<div class="bg-white border rounded-3 p-2 shadow-sm" style="font-size: 0.85rem;">' +
+                        '<div class="d-flex gap-1"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div>' +
+                    '</div>' +
+                '</div>';
+            messagesDiv.appendChild(wrapper);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function removeTyping(id) {
+            var el = document.getElementById(id);
+            if (el) el.remove();
+        }
+
+        function escapeHtml(text) {
+            var div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function formatMessage(text) {
+            // Basic markdown-like formatting
+            text = escapeHtml(text);
+            text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
+            text = text.replace(/\n/g, '<br>');
+            return text;
+        }
+    })();
+</script>
+
+<style>
+    .typing-dot {
+        width: 6px;
+        height: 6px;
+        background: #10b981;
+        border-radius: 50%;
+        animation: typingBounce 1.4s infinite ease-in-out both;
+    }
+    .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+    .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+    @@keyframes typingBounce {
+        0%, 80%, 100% { transform: scale(0); }
+        40% { transform: scale(1); }
+    }
+    #chat-panel { animation: slideUp 0.3s ease; }
+    @@keyframes slideUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    @@media (max-width: 480px) {
+        #chat-panel {
+            width: calc(100vw - 32px) !important;
+            right: 16px !important;
+            bottom: 80px !important;
+        }
+    }
+</style>

@@ -1,8 +1,17 @@
 ﻿@model Product
+@{
+    var isInWishlist = (bool)ViewBag.IsInWishlist;
+    var readingStatus = ViewBag.ReadingStatus as ReadingStatus?;
+    var reviews = ViewBag.Reviews as IEnumerable<Review>;
+    var averageRating = (double)ViewBag.AverageRating;
+    var reviewCount = (int)ViewBag.ReviewCount;
+    var userReview = ViewBag.UserReview as Review;
+}
 <div class="container py-4">
    
-    <form method="post">
-        <!-- TODO: Add hidden field for ProductId -->
+    <form method="post" asp-area="Customer" asp-controller="Cart" asp-action="AddToCart">
+        <!-- Product ID -->
+        <input type="hidden" name="productId" value="@Model.Id" />
 
         <div class="mb-3">
            
@@ -39,8 +48,32 @@
                     <h1 class="h3 fw-bold mb-1">@Model.Title</h1>
                     
                     <p class="text-secondary mb-2">by <span class="fw-medium text-dark">@Model.Author</span></p>
-                   
-                    <p class="text-secondary small mb-4">ISBN: @Model.ISBN</p>
+
+                    <!-- Average Rating -->
+                    <div id="avg-rating-container" class="mb-2" @(reviewCount == 0 ? "style=display:none" : "")>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="text-warning" id="avg-stars">
+                                @for (int i = 1; i <= 5; i++)
+                                {
+                                    <i class="bi @(i <= Math.Round(averageRating) ? "bi-star-fill" : "bi-star")"></i>
+                                }
+                            </div>
+                            <span class="text-secondary small" id="avg-rating-text">@averageRating.ToString("0.0") (@reviewCount review@(reviewCount != 1 ? "s" : ""))</span>
+                        </div>
+                    </div>
+
+                    @if (Model.Pages > 0)
+                    {
+                        <p class="text-secondary small mb-1"><i class="bi bi-book me-1"></i>@Model.Pages pages</p>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.Publisher))
+                    {
+                        <p class="text-secondary small mb-1"><i class="bi bi-building me-1"></i>@Model.Publisher</p>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.PublishedDate))
+                    {
+                        <p class="text-secondary small mb-4"><i class="bi bi-calendar me-1"></i>@Model.PublishedDate</p>
+                    }
 
                     <div class="d-flex align-items-baseline gap-2 mb-4">
                         
@@ -85,11 +118,46 @@
                        @Html.Raw(Model.Description)
                     </div>
 
+                    <!-- Reading Status -->
+                    @if (User.Identity?.IsAuthenticated == true)
+                    {
+                        <div class="border rounded p-3 mb-4" style="background: #f8fafc;">
+                            <p class="text-uppercase fw-bold text-secondary mb-2" style="font-size: 0.65rem; letter-spacing: 0.1em;">
+                                <i class="bi bi-book me-1"></i> Reading Status
+                            </p>
+                            <div class="btn-group w-100" role="group" id="reading-status-group">
+                                <button type="button" class="btn btn-sm reading-status-btn @(readingStatus == ReadingStatus.WantToRead ? "btn-warning" : "btn-outline-warning")"
+                                        data-product-id="@Model.Id" data-status="0">
+                                    <i class="bi bi-bookmark me-1"></i>Want to Read
+                                </button>
+                                <button type="button" class="btn btn-sm reading-status-btn @(readingStatus == ReadingStatus.CurrentlyReading ? "btn-primary" : "btn-outline-primary")"
+                                        data-product-id="@Model.Id" data-status="1">
+                                    <i class="bi bi-book me-1"></i>Currently Reading
+                                </button>
+                                <button type="button" class="btn btn-sm reading-status-btn @(readingStatus == ReadingStatus.Read ? "btn-success" : "btn-outline-success")"
+                                        data-product-id="@Model.Id" data-status="2">
+                                    <i class="bi bi-check-circle me-1"></i>Read
+                                </button>
+                            </div>
+                            @if (isInWishlist)
+                            {
+                                <button type="button" class="btn btn-sm btn-outline-danger mt-2 w-100" id="remove-from-library-btn" data-product-id="@Model.Id">
+                                    <i class="bi bi-x-circle me-1"></i>Remove from Library
+                                </button>
+                            }
+                            <!-- Add to Shelf -->
+                            <button type="button" class="btn btn-sm btn-outline-primary mt-2 w-100" id="add-to-shelf-btn" data-product-id="@Model.Id"
+                                    data-bs-toggle="modal" data-bs-target="#shelfModal">
+                                <i class="bi bi-collection me-1"></i>Add to Shelf
+                            </button>
+                        </div>
+                    }
+
                     <div class="d-flex align-items-center gap-2">
                         <div class="input-group" style="width: 140px;">
                             <span class="input-group-text fw-semibold small" style="background: #17A34A; color: #fff;">Qty</span>
                            
-                            <input type="number" value="1" class="form-control text-center fw-medium" />
+                            <input type="number" name="count" value="1" min="1" max="1000" class="form-control text-center fw-medium" />
                         </div>
                         <button type="submit" class="btn btn-accent flex-grow-1 fw-semibold py-2">
                             <i class="bi bi-cart-plus me-1"></i> Add to Cart
@@ -100,3 +168,508 @@
         </div>
     </form>
 </div>
+
+<!-- Shelf Modal -->
+@if (User.Identity?.IsAuthenticated == true)
+{
+<div class="modal fade" id="shelfModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold"><i class="bi bi-collection me-2"></i>Add to Shelf</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="shelf-list-container">
+                    <p class="text-center text-muted"><i class="bi bi-hourglass-split"></i> Loading shelves...</p>
+                </div>
+                <hr />
+                <div class="d-flex gap-2">
+                    <input type="text" id="new-shelf-name-inline" class="form-control form-control-sm" placeholder="New shelf name..." maxlength="100" />
+                    <button type="button" id="create-shelf-inline-btn" class="btn btn-sm text-white text-nowrap" style="background: #17A34A;">
+                        <i class="bi bi-plus-lg"></i> Create
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+}
+
+<!-- Reviews Section -->
+<div class="container py-4">
+    <div class="card border shadow-sm">
+        <div class="card-body p-4">
+            <h4 class="fw-bold mb-4"><i class="bi bi-chat-square-text me-2"></i>Reviews & Ratings</h4>
+
+            <!-- Write/Edit Review -->
+            @if (User.Identity?.IsAuthenticated == true)
+            {
+                <div class="border rounded p-3 mb-4" style="background: #f8fafc;">
+                    <h6 class="fw-semibold mb-3">@(userReview != null ? "Edit Your Review" : "Write a Review")</h6>
+                    <div class="mb-3">
+                        <label class="form-label small text-secondary">Your Rating</label>
+                        <div id="star-rating-input" class="d-flex gap-1" style="cursor: pointer;">
+                            @for (int i = 1; i <= 5; i++)
+                            {
+                                var filled = userReview != null && i <= userReview.Rating;
+                                <i class="bi @(filled ? "bi-star-fill" : "bi-star") fs-4 star-input" data-value="@i"
+                                   style="color: @(filled ? "#f59e0b" : "#d1d5db"); transition: color 0.15s;"></i>
+                            }
+                        </div>
+                        <input type="hidden" id="rating-value" value="@(userReview?.Rating ?? 0)" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-secondary">Comment (optional)</label>
+                        <textarea id="review-comment" class="form-control" rows="3" maxlength="2000"
+                                  placeholder="Share your thoughts about this book...">@(userReview?.Comment)</textarea>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="button" id="submit-review-btn" class="btn btn-sm text-white" style="background: #17A34A;"
+                                data-product-id="@Model.Id">
+                            <i class="bi bi-send me-1"></i>@(userReview != null ? "Update Review" : "Submit Review")
+                        </button>
+                        @if (userReview != null)
+                        {
+                            <button type="button" id="delete-review-btn" class="btn btn-sm btn-outline-danger"
+                                    data-review-id="@userReview.Id">
+                                <i class="bi bi-trash me-1"></i>Delete
+                            </button>
+                        }
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-light border mb-4">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <a href="/Identity/Account/Login" class="fw-semibold">Sign in</a> to write a review.
+                </div>
+            }
+
+            <!-- Reviews List -->
+            @if (reviews != null && reviews.Any())
+            {
+                <div id="reviews-list">
+                    @foreach (var review in reviews)
+                    {
+                        var isOwn = User.Identity?.IsAuthenticated == true && review.ApplicationUserId == User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                        <div class="border-bottom pb-3 mb-3" @(isOwn ? "id=user-review-item" : "")>
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <span class="fw-semibold">@(review.ApplicationUser?.Name ?? "User")</span>
+                                    <span class="text-secondary small ms-2" id="@(isOwn ? "user-review-date" : "")">@review.CreatedAt.ToString("MMM dd, yyyy")</span>
+                                    @if (review.UpdatedAt.HasValue)
+                                    {
+                                        <span class="text-secondary small ms-1" id="@(isOwn ? "user-review-edited" : "")">(edited)</span>
+                                    }
+                                </div>
+                                <div class="text-warning" id="@(isOwn ? "user-review-stars" : "")">
+                                    @for (int i = 1; i <= 5; i++)
+                                    {
+                                        <i class="bi @(i <= review.Rating ? "bi-star-fill" : "bi-star") small"></i>
+                                    }
+                                </div>
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(review.Comment))
+                            {
+                                <p class="text-secondary mt-2 mb-0" id="@(isOwn ? "user-review-comment" : "")">@review.Comment</p>
+                            }
+                            else if (isOwn)
+                            {
+                                <p class="text-secondary mt-2 mb-0 d-none" id="user-review-comment"></p>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <p class="text-secondary mb-0" id="no-reviews-msg"><i class="bi bi-chat me-1"></i>No reviews yet. Be the first to review this book!</p>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- You Might Also Like -->
+@{
+    var relatedBooks = ViewBag.RelatedBooks as List<Product>;
+}
+@if (relatedBooks != null && relatedBooks.Any())
+{
+    <div class="container py-5">
+        <h4 class="fw-bold mb-4"><i class="bi bi-stars me-2 text-warning"></i>You Might Also Like</h4>
+        <div class="row row-cols-2 row-cols-md-3 row-cols-lg-6 g-3">
+            @foreach (var book in relatedBooks)
+            {
+                <div class="col">
+                    <a asp-action="Details" asp-route-productId="@book.Id" class="text-decoration-none">
+                        <div class="card h-100 border shadow-sm" style="transition: transform 0.2s;" onmouseenter="this.style.transform='translateY(-4px)'" onmouseleave="this.style.transform='none'">
+                            <div style="aspect-ratio: 3/4; overflow: hidden;">
+                                @if (!string.IsNullOrEmpty(book.ImageUrl))
+                                {
+                                    <img src="@book.ImageUrl" class="w-100 h-100" style="object-fit: cover;" />
+                                }
+                                else
+                                {
+                                    <div class="w-100 h-100 d-flex align-items-center justify-content-center bg-light">
+                                        <i class="bi bi-book display-5 text-secondary"></i>
+                                    </div>
+                                }
+                            </div>
+                            <div class="card-body p-2">
+                                <p class="fw-semibold small mb-1 text-dark" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">@book.Title</p>
+                                <p class="text-muted small mb-0" style="font-size: 0.7rem;">@book.Author</p>
+                                <span class="badge bg-secondary mt-1" style="font-size: 0.6rem;">@book.Category?.Name</span>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            // Reading status buttons
+            $('.reading-status-btn').on('click', function (e) {
+                e.preventDefault();
+                var btn = $(this);
+                var productId = btn.data('product-id');
+                var status = btn.data('status');
+
+                $.ajax({
+                    url: '/Customer/Home/UpdateReadingStatus',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ productId: productId, status: status }),
+                    success: function (data) {
+                        if (data.success) {
+                            // Reset all buttons to outline
+                            $('#reading-status-group .reading-status-btn').each(function() {
+                                var s = $(this).data('status');
+                                $(this).removeClass('btn-warning btn-primary btn-success')
+                                       .addClass(s === 0 ? 'btn-outline-warning' : s === 1 ? 'btn-outline-primary' : 'btn-outline-success');
+                            });
+                            // Highlight selected
+                            btn.removeClass('btn-outline-warning btn-outline-primary btn-outline-success');
+                            if (status === 0) btn.addClass('btn-warning');
+                            else if (status === 1) btn.addClass('btn-primary');
+                            else btn.addClass('btn-success');
+
+                            // Show remove button if not visible
+                            if ($('#remove-from-library-btn').length === 0) {
+                                $('#reading-status-group').after(
+                                    '<button type="button" class="btn btn-sm btn-outline-danger mt-2 w-100" id="remove-from-library-btn" data-product-id="' + productId + '">' +
+                                    '<i class="bi bi-x-circle me-1"></i>Remove from Library</button>'
+                                );
+                                bindRemoveBtn();
+                            }
+
+                            toastr.success(data.message);
+                        }
+                    },
+                    error: function (xhr) {
+                        if (xhr.status === 401) {
+                            window.location.href = '/Identity/Account/Login';
+                        } else {
+                            toastr.error('Something went wrong.');
+                        }
+                    }
+                });
+            });
+
+            // Remove from library
+            function bindRemoveBtn() {
+                $('#remove-from-library-btn').off('click').on('click', function (e) {
+                    e.preventDefault();
+                    var productId = $(this).data('product-id');
+
+                    if (!confirm('Remove this book from your library?')) return;
+
+                    $.ajax({
+                        url: '/Customer/Home/RemoveFromLibrary',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({ productId: productId }),
+                        success: function (data) {
+                            if (data.success) {
+                                // Reset all buttons to outline
+                                $('#reading-status-group .reading-status-btn').each(function() {
+                                    var s = $(this).data('status');
+                                    $(this).removeClass('btn-warning btn-primary btn-success')
+                                           .addClass(s === 0 ? 'btn-outline-warning' : s === 1 ? 'btn-outline-primary' : 'btn-outline-success');
+                                });
+                                $('#remove-from-library-btn').remove();
+                                toastr.success(data.message);
+                            }
+                        },
+                        error: function (xhr) {
+                            if (xhr.status === 401) {
+                                window.location.href = '/Identity/Account/Login';
+                            } else {
+                                toastr.error('Something went wrong.');
+                            }
+                        }
+                    });
+                });
+            }
+            bindRemoveBtn();
+
+            // Star rating interaction
+            $('#star-rating-input .star-input').on('mouseenter', function() {
+                var val = $(this).data('value');
+                $('#star-rating-input .star-input').each(function() {
+                    $(this).css('color', $(this).data('value') <= val ? '#f59e0b' : '#d1d5db');
+                    $(this).removeClass('bi-star bi-star-fill').addClass($(this).data('value') <= val ? 'bi-star-fill' : 'bi-star');
+                });
+            }).on('mouseleave', function() {
+                var selected = parseInt($('#rating-value').val()) || 0;
+                $('#star-rating-input .star-input').each(function() {
+                    $(this).css('color', $(this).data('value') <= selected ? '#f59e0b' : '#d1d5db');
+                    $(this).removeClass('bi-star bi-star-fill').addClass($(this).data('value') <= selected ? 'bi-star-fill' : 'bi-star');
+                });
+            }).on('click', function() {
+                var val = $(this).data('value');
+                $('#rating-value').val(val);
+                $('#star-rating-input .star-input').each(function() {
+                    $(this).css('color', $(this).data('value') <= val ? '#f59e0b' : '#d1d5db');
+                    $(this).removeClass('bi-star bi-star-fill').addClass($(this).data('value') <= val ? 'bi-star-fill' : 'bi-star');
+                });
+            });
+
+            // Submit review
+            $('#submit-review-btn').on('click', function() {
+                var rating = parseInt($('#rating-value').val());
+                var comment = $('#review-comment').val().trim();
+                var productId = $(this).data('product-id');
+
+                if (!rating || rating < 1) {
+                    toastr.warning('Please select a star rating.');
+                    return;
+                }
+
+                $.ajax({
+                    url: '/Customer/Home/SubmitReview',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ productId: productId, rating: rating, comment: comment || null }),
+                    success: function(data) {
+                        if (!data.success) { toastr.error(data.message); return; }
+
+                        toastr.success(data.message);
+
+                        // Update avg rating header
+                        updateAvgRating(data.averageRating, data.reviewCount);
+
+                        // Build stars HTML for the review item
+                        var starsHtml = buildStars(data.review.rating, 'small');
+                        var editedHtml = data.isUpdate ? '<span class="text-secondary small ms-1" id="user-review-edited">(edited)</span>' : '';
+                        var commentHtml = data.review.comment
+                            ? '<p class="text-secondary mt-2 mb-0" id="user-review-comment">' + $('<div>').text(data.review.comment).html() + '</p>'
+                            : '<p class="text-secondary mt-2 mb-0 d-none" id="user-review-comment"></p>';
+
+                        if (data.isUpdate && $('#user-review-item').length) {
+                            // Update existing review in place
+                            $('#user-review-stars').html(starsHtml);
+                            $('#user-review-date').text(data.review.createdAt);
+                            if (!$('#user-review-edited').length) {
+                                $('#user-review-date').after('<span class="text-secondary small ms-1" id="user-review-edited">(edited)</span>');
+                            }
+                            var $commentEl = $('#user-review-comment');
+                            if (data.review.comment) {
+                                if ($commentEl.length) {
+                                    $commentEl.text(data.review.comment).removeClass('d-none');
+                                } else {
+                                    $('#user-review-item').append('<p class="text-secondary mt-2 mb-0" id="user-review-comment">' + $('<div>').text(data.review.comment).html() + '</p>');
+                                }
+                            } else if ($commentEl.length) {
+                                $commentEl.addClass('d-none').text('');
+                            }
+                        } else {
+                            // Prepend new review
+                            var newReviewHtml =
+                                '<div class="border-bottom pb-3 mb-3" id="user-review-item">' +
+                                    '<div class="d-flex justify-content-between align-items-start">' +
+                                        '<div>' +
+                                            '<span class="fw-semibold">' + $('<div>').text(data.review.userName).html() + '</span>' +
+                                            '<span class="text-secondary small ms-2" id="user-review-date">' + data.review.createdAt + '</span>' +
+                                        '</div>' +
+                                        '<div class="text-warning" id="user-review-stars">' + starsHtml + '</div>' +
+                                    '</div>' +
+                                    commentHtml +
+                                '</div>';
+
+                            // Hide "no reviews" message and ensure list exists
+                            $('#no-reviews-msg').hide();
+                            if ($('#reviews-list').length === 0) {
+                                $('#no-reviews-msg').after('<div id="reviews-list"></div>');
+                            }
+                            $('#reviews-list').prepend(newReviewHtml);
+                        }
+
+                        // Update submit button text and show delete button
+                        $('#submit-review-btn').html('<i class="bi bi-send me-1"></i>Update Review');
+                        if ($('#delete-review-btn').length === 0) {
+                            $('#submit-review-btn').after(
+                                ' <button type="button" id="delete-review-btn" class="btn btn-sm btn-outline-danger ms-2" data-review-id="' + data.review.id + '">' +
+                                '<i class="bi bi-trash me-1"></i>Delete</button>'
+                            );
+                            bindDeleteBtn();
+                        } else {
+                            $('#delete-review-btn').data('review-id', data.review.id);
+                        }
+                    },
+                    error: function(xhr) {
+                        if (xhr.status === 401) { window.location.href = '/Identity/Account/Login'; }
+                        else { toastr.error('Something went wrong.'); }
+                    }
+                });
+            });
+
+            // Delete review
+            function bindDeleteBtn() {
+                $('#delete-review-btn').off('click').on('click', function() {
+                    if (!confirm('Delete your review?')) return;
+                    var reviewId = $(this).data('review-id');
+
+                    $.ajax({
+                        url: '/Customer/Home/DeleteReview',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({ reviewId: reviewId }),
+                        success: function(data) {
+                            if (!data.success) { toastr.error(data.message); return; }
+
+                            toastr.success(data.message);
+
+                            // Remove user review from list
+                            $('#user-review-item').remove();
+
+                            // If no more reviews, show empty message
+                            if (data.reviewCount === 0) {
+                                if ($('#reviews-list').length) {
+                                    $('#reviews-list').before('<p class="text-secondary mb-0" id="no-reviews-msg"><i class="bi bi-chat me-1"></i>No reviews yet. Be the first to review this book!</p>');
+                                }
+                            }
+
+                            // Update avg rating
+                            updateAvgRating(data.averageRating, data.reviewCount);
+
+                            // Reset the form area
+                            $('#rating-value').val(0);
+                            $('#review-comment').val('');
+                            $('#star-rating-input .star-input').css('color', '#d1d5db')
+                                .removeClass('bi-star-fill').addClass('bi-star');
+                            $('#submit-review-btn').html('<i class="bi bi-send me-1"></i>Write a Review');
+                            $('#delete-review-btn').remove();
+                        },
+                        error: function(xhr) {
+                            if (xhr.status === 401) { window.location.href = '/Identity/Account/Login'; }
+                            else { toastr.error('Something went wrong.'); }
+                        }
+                    });
+                });
+            }
+            bindDeleteBtn();
+
+            // Helpers
+            function buildStars(rating, sizeClass) {
+                var html = '';
+                for (var i = 1; i <= 5; i++) {
+                    html += '<i class="bi ' + (i <= rating ? 'bi-star-fill' : 'bi-star') + (sizeClass ? ' ' + sizeClass : '') + '"></i>';
+                }
+                return html;
+            }
+
+            function updateAvgRating(avg, count) {
+                if (count === 0) {
+                    $('#avg-rating-container').hide();
+                } else {
+                    $('#avg-stars').html(buildStars(Math.round(avg), ''));
+                    $('#avg-rating-text').text(avg.toFixed(1) + ' (' + count + ' review' + (count !== 1 ? 's' : '') + ')');
+                    $('#avg-rating-container').show();
+                }
+            }
+
+            // === Shelves ===
+            var currentProductId = @Model.Id;
+
+            // Load shelves when modal opens
+            $('#shelfModal').on('show.bs.modal', function () {
+                loadShelvesForProduct();
+            });
+
+            function loadShelvesForProduct() {
+                $('#shelf-list-container').html('<p class="text-center text-muted"><i class="bi bi-hourglass-split"></i> Loading...</p>');
+                $.ajax({
+                    url: '/Customer/Home/GetShelvesForProduct?productId=' + currentProductId,
+                    type: 'GET',
+                    success: function (data) {
+                        if (!data.success) return;
+                        var html = '';
+                        if (data.shelves.length === 0) {
+                            html = '<p class="text-muted small text-center">No shelves yet. Create one below!</p>';
+                        } else {
+                            data.shelves.forEach(function (s) {
+                                html += '<div class="form-check d-flex align-items-center gap-2 mb-2">' +
+                                    '<input class="form-check-input shelf-checkbox" type="checkbox" id="shelf-chk-' + s.id + '" data-shelf-id="' + s.id + '"' + (s.isInShelf ? ' checked' : '') + '>' +
+                                    '<label class="form-check-label flex-grow-1" for="shelf-chk-' + s.id + '">' +
+                                        '<span class="fw-medium">' + $('<span>').text(s.name).html() + '</span>' +
+                                        ' <span class="text-muted small">(' + s.itemCount + ')</span>' +
+                                    '</label>' +
+                                '</div>';
+                            });
+                        }
+                        $('#shelf-list-container').html(html);
+                        bindShelfCheckboxes();
+                    },
+                    error: function () { toastr.error('Could not load shelves.'); }
+                });
+            }
+
+            function bindShelfCheckboxes() {
+                $('.shelf-checkbox').off('change').on('change', function () {
+                    var shelfId = $(this).data('shelf-id');
+                    $.ajax({
+                        url: '/Customer/Home/ToggleShelfItem',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({ shelfId: shelfId, productId: currentProductId }),
+                        success: function (data) {
+                            if (data.success) {
+                                toastr.success(data.message);
+                            }
+                        },
+                        error: function () { toastr.error('Something went wrong.'); }
+                    });
+                });
+            }
+
+            // Create shelf inline
+            $('#create-shelf-inline-btn').on('click', function () {
+                var name = $('#new-shelf-name-inline').val().trim();
+                if (!name) { toastr.warning('Enter a shelf name.'); return; }
+
+                $.ajax({
+                    url: '/Customer/Home/CreateShelf',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ name: name, description: null }),
+                    success: function (data) {
+                        if (data.success) {
+                            toastr.success(data.message);
+                            $('#new-shelf-name-inline').val('');
+                            loadShelvesForProduct();
+                        } else {
+                            toastr.error(data.message);
+                        }
+                    },
+                    error: function () { toastr.error('Something went wrong.'); }
+                });
+            });
+        });
+    </script>
+}

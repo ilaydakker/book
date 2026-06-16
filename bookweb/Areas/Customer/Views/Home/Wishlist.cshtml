@@ -1,0 +1,98 @@
+@model IEnumerable<Wishlist>
+@{
+    ViewData["Title"] = "My Wishlist";
+}
+
+<div class="container py-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1"><i class="bi bi-heart-fill text-danger me-2"></i>My Wishlist</h2>
+            <p class="text-secondary mb-0">@Model.Count() book(s) in your wishlist</p>
+        </div>
+        <a asp-action="Index" class="btn btn-outline-dark">
+            <i class="bi bi-arrow-left me-1"></i>Back to Shop
+        </a>
+    </div>
+
+    @if (Model.Any())
+    {
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
+            @foreach (var item in Model)
+            {
+                var product = item.Product!;
+                <div class="col" id="wishlist-item-@product.Id">
+                    <div class="card h-100 border shadow-sm position-relative">
+                        <!-- Remove button -->
+                        <button class="btn btn-sm position-absolute top-0 end-0 m-2 wishlist-btn"
+                                data-product-id="@product.Id"
+                                style="z-index: 2; background: rgba(255,255,255,0.9); border-radius: 50%; width:36px; height:36px; padding:0;">
+                            <i class="bi bi-heart-fill text-danger"></i>
+                        </button>
+
+                        <a asp-action="Details" asp-route-productId="@product.Id" class="text-decoration-none">
+                            <div style="aspect-ratio: 3/4; overflow: hidden;">
+                                @if (!string.IsNullOrEmpty(product.ImageUrl))
+                                {
+                                    <img src="@product.ImageUrl" class="w-100 h-100" style="object-fit: cover;" />
+                                }
+                                else
+                                {
+                                    <div class="w-100 h-100 d-flex align-items-center justify-content-center bg-light">
+                                        <i class="bi bi-book display-3 text-secondary"></i>
+                                    </div>
+                                }
+                            </div>
+                        </a>
+                        <div class="card-body">
+                            <span class="badge bg-secondary mb-2">@product.Category?.Name</span>
+                            <h6 class="card-title fw-semibold mb-2">
+                                <a asp-action="Details" asp-route-productId="@product.Id" class="text-decoration-none text-dark">
+                                    @product.Title
+                                </a>
+                            </h6>
+                            <p class="text-secondary small mb-2">by @product.Author</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="fw-bold text-success">@product.Price.ToString("0.00")</span>
+                                <a asp-action="Details" asp-route-productId="@product.Id" class="btn btn-sm btn-outline-dark">View</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="text-center py-5">
+            <i class="bi bi-heart display-1 text-muted"></i>
+            <h4 class="text-muted mt-3">Your wishlist is empty</h4>
+            <p class="text-secondary">Start adding books you love!</p>
+            <a asp-action="Index" class="btn btn-outline-dark">Browse Books</a>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $('.wishlist-btn').on('click', function (e) {
+                e.preventDefault();
+                var btn = $(this);
+                var productId = btn.data('product-id');
+
+                $.ajax({
+                    url: '/Customer/Home/ToggleWishlist',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ productId: productId }),
+                    success: function (data) {
+                        if (data.success && !data.added) {
+                            $('#wishlist-item-' + productId).fadeOut(300, function() { $(this).remove(); });
+                            toastr.success(data.message);
+                        }
+                    }
+                });
+            });
+        });
+    </script>
+}

@@ -1,0 +1,110 @@
+@page
+@model bookweb.Areas.Identity.Pages.Account.RegisterModel
+@{
+    ViewData["Title"] = "Register";
+}
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow-sm border-0" style="background-color: #1a1a1a; border-radius: 1rem;">
+                <div class="card-body p-4 p-md-5">
+                    <div class="text-center mb-4">
+                        <div class="d-inline-flex align-items-center justify-content-center rounded-circle mb-3"
+                             style="width:56px; height:56px; background: linear-gradient(135deg, #065f46, #10b981);">
+                            <i class="bi bi-person-plus-fill text-white fs-4"></i>
+                        </div>
+                        <h2 class="text-white fw-bold">Create Account</h2>
+                        <p class="text-secondary">Join BookWeb and start exploring</p>
+                    </div>
+
+                    <form id="registerForm" asp-route-returnUrl="@Model.ReturnUrl" method="post">
+                        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                        <div class="mb-3">
+                            <label asp-for="Input.Name" class="form-label text-light"></label>
+                            <input asp-for="Input.Name" class="form-control bg-dark text-white border-secondary" placeholder="John Doe" />
+                            <span asp-validation-for="Input.Name" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Input.Email" class="form-label text-light"></label>
+                            <input asp-for="Input.Email" class="form-control bg-dark text-white border-secondary" placeholder="name@example.com" autocomplete="username" />
+                            <span asp-validation-for="Input.Email" class="text-danger"></span>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="Input.Password" class="form-label text-light"></label>
+                                <input asp-for="Input.Password" class="form-control bg-dark text-white border-secondary" autocomplete="new-password" />
+                                <span asp-validation-for="Input.Password" class="text-danger"></span>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="Input.ConfirmPassword" class="form-label text-light"></label>
+                                <input asp-for="Input.ConfirmPassword" class="form-control bg-dark text-white border-secondary" autocomplete="new-password" />
+                                <span asp-validation-for="Input.ConfirmPassword" class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Input.PhoneNumber" class="form-label text-light"></label>
+                            <input asp-for="Input.PhoneNumber" class="form-control bg-dark text-white border-secondary" />
+                            <span asp-validation-for="Input.PhoneNumber" class="text-danger"></span>
+                        </div>
+
+                        <hr class="border-secondary my-3" />
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="Input.StreetAddress" class="form-label text-light">Street Address</label>
+                                <input asp-for="Input.StreetAddress" class="form-control bg-dark text-white border-secondary" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="Input.City" class="form-label text-light">City</label>
+                                <input asp-for="Input.City" class="form-control bg-dark text-white border-secondary" />
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="Input.State" class="form-label text-light">State</label>
+                                <input asp-for="Input.State" class="form-control bg-dark text-white border-secondary" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="Input.PostalCode" class="form-label text-light">Postal Code</label>
+                                <input asp-for="Input.PostalCode" class="form-control bg-dark text-white border-secondary" />
+                            </div>
+                        </div>
+
+                        @if (User.IsInRole(BookWeb.Utility.SD.Role_Admin))
+                        {
+                            <div class="mb-3">
+                                <label class="form-label text-light">Role</label>
+                                <select asp-for="Input.Role" asp-items="@Model.RoleList" class="form-select bg-dark text-white border-secondary">
+                                    <option disabled selected>-- Select Role --</option>
+                                </select>
+                            </div>
+                        }
+
+                        <div class="d-grid mt-4">
+                            <button id="registerSubmit" type="submit" class="btn btn-lg text-white fw-semibold"
+                                    style="background: linear-gradient(135deg, #065f46, #10b981); border:none;">
+                                <i class="bi bi-person-plus me-2"></i>Register
+                            </button>
+                        </div>
+
+                        <div class="text-center mt-3">
+                            <p class="text-secondary mb-0">
+                                Already have an account?
+                                <a asp-page="./Login" asp-route-returnUrl="@Model.ReturnUrl" class="text-decoration-none" style="color:#10b981;">Sign in</a>
+                            </p>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

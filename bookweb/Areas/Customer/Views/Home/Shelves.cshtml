@@ -1,0 +1,223 @@
+@model IEnumerable<Shelf>
+@{
+    ViewData["Title"] = "My Shelves";
+}
+
+<div class="container py-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1"><i class="bi bi-collection me-2 text-primary"></i>My Shelves</h2>
+            <p class="text-secondary mb-0">Organize your books into custom collections</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn text-white" style="background: linear-gradient(135deg, #065f46, #10b981);" data-bs-toggle="modal" data-bs-target="#createShelfModal">
+                <i class="bi bi-plus-lg me-1"></i>New Shelf
+            </button>
+            <a asp-action="Index" class="btn btn-outline-dark">
+                <i class="bi bi-arrow-left me-1"></i>Browse
+            </a>
+        </div>
+    </div>
+
+    @if (Model.Any())
+    {
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-4">
+            @foreach (var shelf in Model)
+            {
+                <div class="col" id="shelf-card-@shelf.Id">
+                    <div class="card h-100 border shadow-sm">
+                        <div class="card-body d-flex flex-column">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h5 class="card-title fw-bold mb-0">
+                                    <a asp-action="ShelfDetails" asp-route-id="@shelf.Id" class="text-decoration-none text-dark">
+                                        <i class="bi bi-bookmark-star text-primary me-1"></i>@shelf.Name
+                                    </a>
+                                </h5>
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-light" data-bs-toggle="dropdown">
+                                        <i class="bi bi-three-dots-vertical"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <li><a class="dropdown-item edit-shelf-btn" href="#" data-shelf-id="@shelf.Id" data-shelf-name="@shelf.Name" data-shelf-desc="@shelf.Description">
+                                            <i class="bi bi-pencil me-2"></i>Edit</a></li>
+                                        <li><hr class="dropdown-divider"/></li>
+                                        <li><a class="dropdown-item text-danger delete-shelf-btn" href="#" data-shelf-id="@shelf.Id">
+                                            <i class="bi bi-trash me-2"></i>Delete</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(shelf.Description))
+                            {
+                                <p class="text-secondary small mb-3">@shelf.Description</p>
+                            }
+                            <div class="mt-auto d-flex justify-content-between align-items-center">
+                                <span class="badge bg-light text-dark border">
+                                    <i class="bi bi-book me-1"></i>@shelf.ShelfItems.Count book@(shelf.ShelfItems.Count != 1 ? "s" : "")
+                                </span>
+                                <small class="text-muted">@shelf.CreatedAt.ToString("MMM dd, yyyy")</small>
+                            </div>
+                        </div>
+                        <a asp-action="ShelfDetails" asp-route-id="@shelf.Id" class="card-footer text-center text-decoration-none bg-light border-top">
+                            <small class="fw-semibold text-primary">View Books <i class="bi bi-arrow-right"></i></small>
+                        </a>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="text-center py-5">
+            <i class="bi bi-collection display-1 text-muted"></i>
+            <h4 class="text-muted mt-3">No shelves yet</h4>
+            <p class="text-secondary">Create custom shelves to organize your books!</p>
+            <button class="btn btn-outline-dark" data-bs-toggle="modal" data-bs-target="#createShelfModal">
+                <i class="bi bi-plus-lg me-1"></i>Create Your First Shelf
+            </button>
+        </div>
+    }
+</div>
+
+<!-- Create Shelf Modal -->
+<div class="modal fade" id="createShelfModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold"><i class="bi bi-plus-circle me-2"></i>Create New Shelf</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Shelf Name <span class="text-danger">*</span></label>
+                    <input type="text" id="create-shelf-name" class="form-control" maxlength="100" placeholder="e.g., 2026 Summer Plan" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Description <span class="text-muted">(optional)</span></label>
+                    <textarea id="create-shelf-desc" class="form-control" rows="2" maxlength="500" placeholder="What's this shelf for?"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="create-shelf-submit" class="btn text-white" style="background: #17A34A;">
+                    <i class="bi bi-check-lg me-1"></i>Create Shelf
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Shelf Modal -->
+<div class="modal fade" id="editShelfModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold"><i class="bi bi-pencil me-2"></i>Edit Shelf</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="edit-shelf-id" />
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Shelf Name <span class="text-danger">*</span></label>
+                    <input type="text" id="edit-shelf-name" class="form-control" maxlength="100" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Description <span class="text-muted">(optional)</span></label>
+                    <textarea id="edit-shelf-desc" class="form-control" rows="2" maxlength="500"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="edit-shelf-submit" class="btn text-white" style="background: #17A34A;">
+                    <i class="bi bi-check-lg me-1"></i>Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            // Create shelf
+            $('#create-shelf-submit').on('click', function () {
+                var name = $('#create-shelf-name').val().trim();
+                var desc = $('#create-shelf-desc').val().trim();
+
+                if (!name) { toastr.warning('Please enter a shelf name.'); return; }
+
+                $.ajax({
+                    url: '/Customer/Home/CreateShelf',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ name: name, description: desc || null }),
+                    success: function (data) {
+                        if (data.success) {
+                            toastr.success(data.message);
+                            setTimeout(function () { location.reload(); }, 500);
+                        } else {
+                            toastr.error(data.message);
+                        }
+                    },
+                    error: function () { toastr.error('Something went wrong.'); }
+                });
+            });
+
+            // Edit shelf - populate modal
+            $('.edit-shelf-btn').on('click', function (e) {
+                e.preventDefault();
+                $('#edit-shelf-id').val($(this).data('shelf-id'));
+                $('#edit-shelf-name').val($(this).data('shelf-name'));
+                $('#edit-shelf-desc').val($(this).data('shelf-desc'));
+                new bootstrap.Modal($('#editShelfModal')[0]).show();
+            });
+
+            // Edit shelf - submit
+            $('#edit-shelf-submit').on('click', function () {
+                var shelfId = parseInt($('#edit-shelf-id').val());
+                var name = $('#edit-shelf-name').val().trim();
+                var desc = $('#edit-shelf-desc').val().trim();
+
+                if (!name) { toastr.warning('Please enter a shelf name.'); return; }
+
+                $.ajax({
+                    url: '/Customer/Home/UpdateShelf',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ shelfId: shelfId, name: name, description: desc || null }),
+                    success: function (data) {
+                        if (data.success) {
+                            toastr.success(data.message);
+                            setTimeout(function () { location.reload(); }, 500);
+                        } else {
+                            toastr.error(data.message);
+                        }
+                    },
+                    error: function () { toastr.error('Something went wrong.'); }
+                });
+            });
+
+            // Delete shelf
+            $('.delete-shelf-btn').on('click', function (e) {
+                e.preventDefault();
+                var shelfId = $(this).data('shelf-id');
+                if (!confirm('Delete this shelf and remove all books from it?')) return;
+
+                $.ajax({
+                    url: '/Customer/Home/DeleteShelf',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ shelfId: shelfId }),
+                    success: function (data) {
+                        if (data.success) {
+                            $('#shelf-card-' + shelfId).fadeOut(300, function () { $(this).remove(); });
+                            toastr.success(data.message);
+                        } else {
+                            toastr.error(data.message);
+                        }
+                    },
+                    error: function () { toastr.error('Something went wrong.'); }
+                });
+            });
+        });
+    </script>
+}
